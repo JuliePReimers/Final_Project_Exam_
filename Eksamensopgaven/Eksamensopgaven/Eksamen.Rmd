@@ -1,0 +1,314 @@
+---
+title: 'Sentiment analysis of danish newspapers in 1864'
+author: Julie, Marchus, Nikolaj og Ditte  
+date: 
+output: html_document
+---
+
+# Installing packages 
+We need to install the followong packages to do textmining and sentiment analysis: 
+
+```{r setup, include=TRUE}
+
+knitr::opts_chunk$set(echo = TRUE,
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+```{r}
+install.packages("pdftools")
+install.packages("qpdf")
+install.packages("tidytext")
+install.packages("tokenizers")
+install.packages("textdata")
+install.packages("ggwordcloud")
+```
+
+Then we load the libraries of the packages, so they are ready to use:
+```{r library}
+library(tidyverse)
+library(here)
+library(tidyr)
+library(dplyr)
+
+# For text mining:
+library(pdftools)
+library(tidytext)
+library(textdata) 
+library(ggwordcloud)
+library(tokenizers)
+library(Sentida)
+library(ggplot2)
+library(googlesheets4)
+```
+
+# Uploading our dataset into R
+
+Now it is time to load our data into R-Studio, and we do so by using the link from our mediestream search, and using the read_csv function. We define our datasæt as "data_mediestream", and now have a large dataset with all danish newspaper articles from 1864 that shows from the search: *("dybbøl" OR "slesvig" OR "Als" OR "holsten") AND "krig" AND py:1864"*
+
+```{r}
+# indhentning af data fra avisartikler fra mediestream 
+
+all_data <- read_csv("data/all_data_backup3.csv")
+```
+
+# Getting the information we need from the dataset 
+## We want to look at newspapers published in Copenhagen, and in Ribe, Tønder and Haderslev. 
+We know from looking at the tibble of our dataset, that the collumn *lplace* shows the publication place.
+Firstly, we make a dataset with only the articles published in newspapers from Copenhagen, by using the filter(), and writing lplace == "København". We choose to define this Copenhagen data as *data_cph*. 
+
+```{r}
+# Find udgivelsessted for aviserne 
+data_cph <- all_data %>% filter(lplace == "København")
+```
+
+Then we do the same thing with the newspapers from Schleswig, and by using a |, we can get af new dataset of only articles published in Haderselv, Tønder or Ribe. We define this data as *data_slw*, slw being short for Schleswig.  
+
+```{r}
+data_slw <- filter(all_data, lplace == "Tønder" | lplace == "Haderslev" | lplace == "Ribe")
+```
+
+# Analysing the data 
+We now have the datasets from Copenhagen and from Schleswig, but in order to analyse the articles, we need to look at the collumn *fulltext_org*. 
+Lets look at the collumn, to see the type of data we are working with. 
+```{r}
+all_data %>% select(fulltext_org)
+```
+
+# Kør sentiment analyse for data
+```{r}
+sentiment_1864_total <- all_data$fulltext_org %>% 
+  sentida(output = "total")
+
+sentiment_1864_mean <- all_data$fulltext_org %>% 
+  sentida(output = "mean")
+
+sentiment_slw_total <- data_slw$fulltext_org %>% 
+  sentida(output = "total")
+
+sentiment_slw_mean <- data_slw$fulltext_org %>% 
+  sentida(output = "mean")
+
+
+sentiment_slw_median <- data_slw$fulltext_org %>% 
+  sentida(output = "median")
+
+```
+
+```{r}
+sentiment_cph_total <- data_cph$fulltext_org %>% 
+  sentida(output = "total")
+
+sentiment_cph_mean <- data_cph$fulltext_org %>% 
+  sentida(output = "mean")
+```
+
+
+```{r}
+#Data 1864
+data_tonder <- filter(all_data, lplace == "Tønder")
+data_haderslev <- filter(all_data, lplace == "Haderslev")
+data_ribe <- filter(all_data, lplace == "Ribe") 
+
+sentiment_tonder <- sentida(data_tonder$fulltext_org, output = "total")
+sentiment_haderslev <- sentida(data_haderslev$fulltext_org, output = "total")
+sentiment_ribe <- sentida(data_ribe$fulltext_org, output = "total")
+
+```
+
+#Visualization of sentiment in newspapers in the different locations 
+```{r}
+ggplot() + 
+  geom_col(aes(x = "Tønder", y = sentiment_tonder), fill = "pink")+
+  geom_col(aes(x = "Ribe", y = sentiment_ribe), fill = "maroon")+
+  geom_col(aes(x = "Haderslev", y = sentiment_haderslev), fill = "salmon")+
+  geom_col(aes(x = "København", y = sentiment_cph_total), fill = "purple")+ 
+  ggtitle("Sentiment analysis of newspapers mentioning the Schleswig Holstein colflict 1864")+ 
+  xlab("Publication Location")+
+  ylab("Sentiment score (Sentida)")
+
+```
+
+
+# Sentiment analyse på historikeres fremstilling af Schlesvig Holstein konflikten: 
+```{r}
+# Sentida af Danmarkshistorien.dks side om krigen 1864 
+pdf_text("data/1864.pdf") %>% 
+  sentida(output = "total")
+
+#Sentida af tidsskrift om krisen, udgivet i historisk tidsskrift 1973: 
+
+pdf_text("data/Bismarck_Europa_og_SH.pdf") %>% 
+  sentida(output = "total")
+
+#Sentida af bogen Den anden Slesvigske Krig 1864, udgivet i 1900
+
+pdf_text("data/Den_anden_slesvigske_krig.pdf") %>% 
+  sentida(output = "total")
+
+```
+
+
+# Loading datasets from 1862, 1866 and 1868 
+After looking at our main dataset all_data from 1864, we want to see how the sentiment and overall mentioning of the Schleswig Holsteen conflict played out in the newspapers. To do so, we have used the same searchlink in mediestream, and only changed the publication year. This we have done three times, making three new datasets, defines af all_data_1862, all_data_1866 and all_data_1868. 
+
+```{r}
+all_data_1862 <- read.csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1862&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+```{r}
+all_data_1866 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1866&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+
+```
+
+```{r}
+all_data_1868 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1868&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+With the new datasets, we want to see the sentidascores for each year, and use the lapply funtion, to make a sentiment column based on the sentiment score of the fulltext_org column, as explained earlier. We did this for all of the datasets, and choose the output "mean", so the amount of published articles, ex. in bigger cities, would not effect the outcome of the score.  
+
+```{r}
+all_data_1862$sentiment <- lapply(all_data_1862$fulltext_org,sentida, output = "mean")
+all_data$sentiment <- lapply(all_data$fulltext_org,sentida, output = "mean")
+all_data_1866$sentiment <- lapply(all_data_1866$fulltext_org,sentida, output = "mean")
+all_data_1868$sentiment <- lapply(all_data_1868$fulltext_org,sentida, output = "mean")
+
+data_slw$sentiment <- lapply(data_slw$fulltext_org,sentida, output = "total")
+```
+
+# Looking at the new data 
+
+Firstly, we want to compare de different datasets, and see if there is a development in the volume of articles published about the Schleswig Holstein conflict from 1862-1868. 
+
+```{r}
+ggplot()+ 
+  geom_col(aes(x = "1862", y = nrow(all_data_1862)), fill = "deepskyblue3")+
+  geom_col(aes(x = "1864", y = nrow(all_data)), fill = "blue4")+
+  geom_col(aes(x = "1866", y = nrow(all_data_1866)), fill = "blue3")+
+  geom_col(aes(x = "1868", y = nrow(all_data_1868)), fill = "deepskyblue3")+
+  ggtitle("Published articles mentioning Sleswig Holstein")+ 
+  xlab("Year")+
+  ylab("Number of published articles")
+  
+```
+
+# Visualizations of publishings based on location. 
+Then we look at where the conflict has been mentioned, by making a visualisation of amount of articles, based in the factor lplace. 
+
+```{r}
+ggplot(all_data, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1864")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+
+Then we have done the same thing for the other three datasets to make a comparison. 
+
+```{r}
+ggplot(all_data_1862, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1862")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+
+```{r}
+ggplot(all_data_1866, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1866")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+
+```{r}
+ggplot(all_data_1868, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1868")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+
+# Making visualizations showing the average setidascore in each of the publishing locations. 
+
+First we need unlist the sentiment column in our four datasets, since the column we made came out in a list format. In order to use the sentiment column for calculating average scores for different locations, first we unlisted the column, to turn it into a column of numeric values. This we define as data_year_new. Then we use the group_by tool, to make groups of articles based on lplace, which is the publication location. After the values have been grouped, we can use the mean() function to calculate the average sentiment score for each of the regions of publication, making sure to use the newly made unlist(sentiment) column in the new datasets, to use the sentiment scores as numeric values. Then we use these new averages, to make visualizations showing the average sentiment score for each location, using the geom_col to make a barchart showing avergae sentiment in the x-axis and location in the y-axis. We did the same thing for the remaining three datasets, to compare the four years. 
+
+##1862
+```{r}
+data_1862_new <- all_data_1862 %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r}
+mean_sentiment_1862 <- data_1862_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r}
+ggplot(data = mean_sentiment_1862)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+
+##1864
+```{r}
+data_1864_new <- all_data %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r}
+mean_sentiment_1864 <- data_1864_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r}
+ggplot(data = mean_sentiment_1864)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1864")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+
+## 1866
+```{r}
+data_1866_new <- all_data_1866 %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r}
+mean_sentiment_1866 <- data_1866_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r}
+ggplot(data = mean_sentiment_1866)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+
+## 1868
+```{r}
+data_1868_new <- all_data_1868 %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r}
+mean_sentiment_1868 <- data_1868_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r}
+ggplot(data = mean_sentiment_1862)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
