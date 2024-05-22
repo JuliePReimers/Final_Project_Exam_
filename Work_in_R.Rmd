@@ -1,0 +1,437 @@
+---
+title: "Sentiment_analysis"
+author:: "Marchus, Nikolaj, Ditte and Julie 
+output: html_document
+date: "2024-05-06"
+---
+
+# Installing packages
+We install all the packages needed for doing textmining and sentiment analysis
+Becauce Sentida won´t install just by using install.packages code regardless of R version I use the devtools packages and get the package through a GitHub account. And open it through the library to see if done correctly. 
+
+```{r install packages, eval=FALSE} 
+install.packages("devtools")
+install.packages("usethis")
+
+devtools::install_github("Guscode/Sentida")
+library(devtools)
+library(Sentida)
+```
+
+```{r install packages, eval=FALSE}
+install.packages("here")
+install.packages("pdftools")
+install.packages("qpdf")
+install.packages("tidytext")
+install.packages("tokenizers")
+install.packages("textdata")
+install.packages("ggwordcloud")
+```
+
+Then we open them trough the library
+
+```{r open packages}
+library(tidyverse)
+library(here)
+library(pdftools)
+library(textdata)
+library(tidytext)
+library(ggwordcloud)
+```
+
+# Upload data into R
+We read the, in lapsapi created data into R 
+
+```{r read data into R}
+all_data <- read.csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1864&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+
+# Gather the information we need from the dataset
+We want to compare the newspapers published in Copenhagen vs. the newspapers published in Ribe, Tønder and Haderslev. From looking at the tibble of our dataset we know, that the column called lplace refers to the publication place of each newspaper therefore we create a dataset only with the data publication place = Copenhagen, which we can do by using the filter() and choosing "København" as our lplace. We define this dataset outcome as data_cph and load to see if done correctly and to see the data 
+
+
+```{r create dataset only containing data from Copenhagen}
+data_cph <- all_data %>%
+  filter(lplace=="København")
+
+data_cph
+```
+We do the same to create a dataset only with the data publication place = Tønder, Haderslev and Ribe just by adding a | which stands for "and" and define this outcome as data_slw and again load to see if done correctly and to see the data 
+
+
+```{r create dataset only containing data from Tønder, Haderslev and Ribe}
+data_slw <- filter(all_data, lplace=="Tønder" | lplace=="Haderslev" | lplace=="Ribe")
+
+data_slw
+
+```
+
+# Analysing the data
+We now have two seperate datasets, one containing all the data published in Copenhagen and another one with all the data published in either Tønder, Ribe or Haderslev. For the Schleswig dataset we choose these 3 cities because of their location in the center of the happening and because of their dataamount. 
+We now want to start by looking at our fulltext_org column, because it is the column on which we are going to work. 
+```{r look at the fulltext column}
+all_data %>% 
+  select(fulltext_org)
+```
+# Sentiment analyis
+First, it is important to state that we choose not to remove any stopwords from our dataset. The reason behind is that we work with the package sentida, which analyses by using not only the analysed word, but also the context before and behind this word. Therefore, to get the best possible result, we choose not to remove any stopwords that possible could be a part of the context. 
+As mentioned we use the sentida package. Here we compare the total value and the mean value from each dataset with each other. 
+
+```{r use sentiment analysis on slw dataset}
+sentiment_slw_total <- data_slw$fulltext_org %>%
+  sentida(output = "total")
+
+sentiment_slw_mean <- data_slw$fulltext_org %>%
+  sentida(output = "mean")
+```
+
+
+```{r use sentiment analysis on cph dataset}
+sentiment_cph_total <- data_cph$fulltext_org %>%
+  sentida(output = "total")
+
+sentiment_cph_mean <- data_cph$fulltext_org %>%
+  sentida(output = "mean")
+```
+
+#Comparison
+We load our environment to see the sentiment analysis, from which we are able to compare the two areas. 
+
+```{r see the sentiments}
+sentiment_slw_total
+sentiment_slw_mean
+
+sentiment_cph_total
+sentiment_cph_mean
+```
+We see that the newspapers from the Schleswig region are much more negative than the ones published in Copenhagen. 
+
+
+# Visualization, showing numbers of articles
+We want to create a visualization that shows the amount of articles published in each location, based of the lplace column. 
+
+```{r}
+ggplot(all_data, aes(y=lplace, fill= "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of published articles mentioning the Schleswig Holstein conflict in 1864")+
+  xlab("Amount of articles")+
+  ylab("Publication location")
+  
+```
+Here we see that there are published a lot more in Copenhagen than in the other locations, which could effect the following visualizations. 
+
+
+
+# Visualization
+We want to create a visualization that shows the individually newspapers sentiment value. For this we need to separate the slw dataset into three datasets. 
+
+
+```{r}
+data_tonder <- filter(all_data, lplace == "Tønder")
+data_haderslev <- filter(all_data, lplace == "Haderslev")
+data_ribe <- filter(all_data, lplace == "Ribe") 
+
+sentiment_tonder <- sentida(data_tonder$fulltext_org, output = "mean")
+sentiment_haderslev <- sentida(data_haderslev$fulltext_org, output = "mean")
+sentiment_ribe <- sentida(data_ribe$fulltext_org, output = "mean")
+```
+ 
+ Then we use ggplot to create the visualization and choose some colors
+```{r}
+ggplot() + 
+  geom_col(aes(x = "Tønder", y = sentiment_tonder), fill = "pink")+
+  geom_col(aes(x = "Ribe", y = sentiment_ribe), fill = "maroon")+
+  geom_col(aes(x = "Haderslev", y = sentiment_haderslev), fill = "salmon")+
+  geom_col(aes(x = "København", y = sentiment_cph_mean), fill = "purple")+ 
+  ggtitle("Sentiment analysis of newspapers mentioning the Schleswig Holstein colflict 1864")+ 
+  xlab("Publication Location")+
+  ylab("Sentiment score (Sentida)")
+```
+From this visualization we can see that the most positive mention comes from the regions Copenhagen, Tønder and Ribe and that the most negative mention comes from Haderslev. 
+
+
+
+# Loading datasets from 1862, 1866 and 1868
+Because we wish to see how the publishing amount and the sentiment analysis evolve throughout the years before and after our 1864 period, we load three other datasets from respectively 1862, 1866 and 1868. 
+
+```{r read data from 1862}
+all_data_1862 <- read.csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1862&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+```{r read data from 1866}
+all_data_1866 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1866&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+```{r}
+all_data_1868 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1868&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
+```
+
+```{r}
+all_data_1862$sentiment <- lapply(all_data_1862$fulltext_org,sentida, output = "mean")
+all_data$sentiment <- lapply(all_data$fulltext_org,sentida, output = "mean")
+all_data_1866$sentiment <- lapply(all_data_1866$fulltext_org,sentida, output = "mean")
+all_data_1868$sentiment <- lapply(all_data_1868$fulltext_org,sentida, output = "mean")
+
+```
+Now we create a visualization showing the amount of published articles in the individually years
+
+```{r}
+ggplot()+ 
+  geom_col(aes(x = "1862", y = nrow(all_data_1862)), fill = "deepskyblue3")+
+  geom_col(aes(x = "1864", y = nrow(all_data)), fill = "blue4")+
+  geom_col(aes(x = "1866", y = nrow(all_data_1866)), fill = "blue3")+
+  geom_col(aes(x = "1868", y = nrow(all_data_1868)), fill = "deepskyblue3")+
+  ggtitle("Published articles mentioning Sleswig Holstein")+ 
+  xlab("Year")+
+  ylab("Number of published articles")
+```
+From which we see that publishing amount of articles mentioning Schleswig Holstein conflict is highest in the year of happening and lowest in the years before and gradually decreases in the years following. 
+
+# Visualization, showing publication based on location
+
+We reload the previously shown visualization showing the in amount of published articles in 1864. 
+
+```{r}
+ggplot(all_data, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1864")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+We do the same thing for the other three datasets so that we later can compare the four years. 
+
+```{r number of articles 1862}
+ggplot(all_data_1862, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1862")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+```{r number of articles 1866}
+ggplot(all_data_1866, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1866")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+```{r number of articles 1868}
+ggplot(all_data_1868, aes(y=lplace, fill = "Number of articles"))+
+  geom_bar()+
+  ggtitle("Number of articles about the Schleswig Holstein conflict 1868")+ 
+  xlab("Amount of articles")+
+  ylab("Publication location")
+```
+# Short comparison, to be continued in the section "Comparison" 
+From a short overview we can see some changes, for example is the 1864 visualization the only one containing articles from Aarhus, whereas the others also contain articles published under the different spelling Århus. There are also changes in Haderslev and Frederikssund, which aren´t publishing anything at all in the year 1866. By looking further in Haderslev we also see that Haderslev is the location publishing second most throughout 1862, but then decreases throughout the following years. 
+
+# Visualization, showing the publisher of the published articles
+Because of the significant changes in Haderslevs publishing amount throughout the years, we create four  visualization that shows the publisher and the amount of articles published in each year. 
+
+
+```{r}
+ggplot(all_data_1862, aes(y=familyId))+
+  geom_bar()+
+  ggtitle("Amount of the articles mentioning the Schleswig Holstein conflict published in 1862, based on the publisher")
+```
+```{r}
+ggplot(all_data, aes(y=familyId))+
+  geom_bar()+
+  ggtitle("Amount of the articles mentioning the Schleswig Holstein conflict published in 1864, based on the publisher")
+```
+```{r}
+ggplot(all_data_1866, aes(y=familyId))+
+  geom_bar()+
+  ggtitle("Amount of the articles mentioning the Schleswig Holstein conflict published in 1866, based on the publisher")
+```
+```{r}
+ggplot(all_data_1868, aes(y=familyId))+
+  geom_bar()+
+  ggtitle("Amount of the articles mentioning the Schleswig Holstein conflict published in 1868, based on the publisher")
+```
+
+
+We know that the Dannevirke 1838 newspaper is a newspaper from Haderslev, so if we look only at the publishing amount of Dannevirke 1838, we see that they suddenly disappear in 1866 and then show up again under the new name Dannevirke 1867 in the dataset from 1868, which could mean that the Dannevirke newspaper, based in Haderslev closed after Haderslev became prussia and then opened up under a new name in 1967. To confirm og deny this theory, we seach a bit on Google and find a article from "Grænseforeningen" about the newspaper Dannevirke, which tells us that prussia closed it after the war in 1684, but that the reopened under the name "Haderslev avis" in 1867, but then decided to change it back to Dannevirke, but this time as Dannevirke 1867, which explains both why there aren´t any publications in 1966 and why there are some in 1868. This is a good example for showing that searching and analysis in R actually can tell us something, that may be valuable to research. 
+
+# Visualization, showing the average sentiment scores from 1862, 1866 and 1868. 
+We also want to compare the sentidascores from the years after and before. For this we need to unlist the sentiment columns in our four datasets, since the column we made came out in a list format, but in order to use the sentiment columns for calculating the average scores for different locations we need the values as numeric values. After, we use the group_by_tool, to make groups of articles based on lplace, which makes it possible for us to use the mean() function to calculate the average scores for each regions of publication. We make the visualization for all of the four datasets. 
+
+```{r unlist dataset from 1862}
+data_1862_new <- all_data_1862 %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r calculate average sentidascore 1862}
+mean_sentiment_1862 <- data_1862_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r visualization 1862}
+ggplot(data = mean_sentiment_1862)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+```{r unlist dataset from 1864}
+data_1864_new <- all_data %>% 
+  mutate(unlist(sentiment))
+```
+
+```{r calculate average sentidascore 1864}
+mean_sentiment_1864 <- data_1864_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r visualization 1864}
+ggplot(data = mean_sentiment_1864)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1864")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+```{r unlist dataset from 1866}
+data_1866_new <- all_data_1866 %>% 
+  mutate(unlist(sentiment))
+```
+
+
+```{r calculate average sentidascores 1866}
+mean_sentiment_1866 <- data_1866_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+```{r visualization 1866}
+ggplot(data = mean_sentiment_1866)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+
+```{r unlist dataset from 1868}
+data_1868_new <- all_data_1868 %>% 
+  mutate(unlist(sentiment))
+```
+
+
+```{r calculate average sentidascore 1868}
+mean_sentiment_1868 <- data_1868_new %>% 
+  group_by(lplace) %>%
+  summarise(mean_sentiment = mean(`unlist(sentiment)`))
+```
+
+
+```{r visualization 1868}
+ggplot(data = mean_sentiment_1868)+ 
+  geom_col(aes(x = mean_sentiment, y = lplace))+
+  ggtitle("Average sentiment in articles based on location of publication 1862")+ 
+  xlab("Location")+
+  ylab("Average sentida-score for articles published in each city")
+```
+# Sentiment analysis on the primary historians presentation of the Schlesvig Holstein conflict
+For good measure we also make an sentiment analysis on our primary source text for the historians point of view. Herefore we upload the pdf text into R and use the sentida as previously. 
+
+....
+
+
+# Mapping
+As a finish up we decided to create a map, that visualize our work here in R. 
+For making a map we need further packages, which we install and open trough the library. Furthermore, we need to create our own datasheet, here we use google sheets. For the data we use our lplace and our previously found sentiment for each of the choosen lplaces. Other than that, we need to find coordinates for our lplaces for R to read and place on a in the leaflet package premade map of Denmark. Herefore we use google earth and write the given coordinates into the google sheet. To make the sheet accessibly here in R we could use the read_sheet function, but an even easier way is to open the files section and automatically upload a csv. document into the files section in R, from where you can click on the file and chose import dataset and it uploads it to the environment. 
+
+```{r}
+install.packages("googlesheets4")
+install.packages("leaflet")
+```
+
+
+```{r}
+library(googlesheets4)
+library(leaflet)
+```
+
+
+```{r}
+data_tønder <- filter(all_data, lplace=="Tønder")
+
+data_tønder
+```
+
+```{r}
+sentiment_tønder_total <- data_tønder$fulltext_org %>%
+  sentida(output = "total")
+
+sentiment_tønder_mean <- data_tønder$fulltext_org %>%
+  sentida(output = "mean")
+```
+
+
+```{r}
+data_ribe <- filter(all_data, lplace=="Ribe")
+
+data_ribe
+```
+
+
+```{r}
+sentiment_ribe_total <- data_ribe$fulltext_org %>%
+  sentida(output = "total")
+
+sentiment_ribe_mean <- data_ribe$fulltext_org %>%
+  sentida(output = "mean")
+```
+
+
+```{r}
+data_haderslev <- filter(all_data, lplace=="Haderslev")
+
+data_haderslev
+```
+
+
+```{r}
+sentida(data_haderslev$fulltext_org, output = "total")
+sentida(data_haderslev$fulltext_org, output = "mean")
+```
+
+
+# Lav spreadsheet: 
+
+
+```{r}
+DANmap <- leaflet() %>% 
+  addTiles() %>% 
+  addProviderTiles("Thunderforest.SpinalMap") %>% 
+  addMarkers(lng = data_sheet_SA2022$Longitude, 
+             lat = data_sheet_SA2022$Latitude,
+             popup = data_sheet_SA2022$Description)
+DANmap
+```
+
+
+```{r}
+DANmap_notes <- leaflet() %>% 
+  addTiles() %>% 
+  addProviderTiles("Thunderforest.SpinalMap") %>% 
+  addMarkers(lng = data_sheet_SA2022$Longitude, 
+             lat = data_sheet_SA2022$Latitude,
+             popup=paste(
+               "Lplace:", data_sheet_SA2022$Lplace, "<br>",
+               "Sentiment_mean:", data_sheet_SA2022$Sentiment_mean, "<br>",
+               "Sentiment_total:", data_sheet_SA2022$Sentiment_total,"<br>",
+               "Newspaper count:", data_sheet_SA2022$Antal_newspapers),
+             clusterOptions = markerClusterOptions())
+DANmap_notes
+```
+
+
+
+
+1. Liste over ord i sentiment
+2. Søjlediagram med visuelt mean og total value
+3. Word cloud 
+4. Map med individuelle sentiments 
+
