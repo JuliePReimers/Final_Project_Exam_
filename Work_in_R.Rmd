@@ -1,8 +1,13 @@
 ---
 title: 'Sentiment analysis of danish newspapers in 1864'
 author: Julie, Marchus, Nikolaj og Ditte  
-date: 
-output: html_document
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
 ---
 ```{r setup, include=TRUE}
 
@@ -128,9 +133,8 @@ ggplot(data = all_data, aes(y=lplace, fill= "Number of articles"))+
   xlab("Amount of articles")+
   ylab("Publication location")
 ```
+
 Here we see that there are published a lot more in Copenhagen than in the other locations, which could effect the following visualizations. 
-
-
 
 # Visualization
 We want to create a visualization that shows the individually newspapers sentiment value. For this we need to separate the slw dataset into three datasets. 
@@ -147,7 +151,8 @@ sentiment_ribe <- sentida(data_ribe$fulltext_org, output = "mean")
 ```
  
 # Visualization
- Then we use ggplot to create the visualization and choose some colors
+ Then we use ggplot to create the visualization and choose some colors:
+ 
 ```{r visualization, showing sentiment analysis in the different regions, 1864}
 ggplot() + 
   geom_col(aes(x = "Tønder", y = sentiment_tonder), fill = "pink")+
@@ -158,6 +163,7 @@ ggplot() +
   xlab("Publication Location")+
   ylab("Sentiment score (Sentida)")
 ```
+
 From this visualization we can see that the most positive mention comes from the regions Copenhagen, Tønder and Ribe and that the most negative mention comes from Haderslev. 
 
 
@@ -176,6 +182,7 @@ all_data_1866 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/e
 ```{r read data from 1868}
 all_data_1868 <- read_csv("https://labs.statsbiblioteket.dk/labsapi/api/aviser/export/fields?query=%28%22dybb%C3%B8l%22%20OR%20%22slesvig%22%20OR%20%22Als%22%20OR%20%22holsten%22%29%20AND%20%22krig%22%20AND%20py%3A1868&fields=link&fields=timestamp&fields=fulltext_org&fields=familyId&fields=lplace&max=-1&structure=header&structure=content&format=CSV")
 ```
+
 To create a visualization, we need the sentiment values in a separate column, which we can create with the lapply() function
 
 ```{r making a column containing the sentiment values}
@@ -198,6 +205,7 @@ ggplot()+
   xlab("Year")+
   ylab("Number of published articles")
 ```
+
 From which we see that publishing amount of articles mentioning Schleswig Holstein conflict is highest in the year of happening and lowest in the years before and gradually decreases in the years following. 
 
 # Visualization
@@ -211,6 +219,7 @@ ggplot(all_data, aes(y=lplace, fill = "Number of articles"))+
   xlab("Amount of articles")+
   ylab("Publication location")
 ```
+
 We do the same thing for the other three datasets so that we later can compare the four years. 
 
 ```{r number of articles 1862}
@@ -236,6 +245,7 @@ ggplot(all_data_1868, aes(y=lplace, fill = "Number of articles"))+
   xlab("Amount of articles")+
   ylab("Publication location")
 ```
+
 # Short comparison, to be continued in the section "Comparison" 
 From a short overview we can see some changes, for example is the 1864 visualization the only one containing articles from Aarhus, whereas the others also contain articles published under the different spelling Århus. There are also changes in Haderslev and Frederikssund, which aren´t publishing anything at all in the year 1866. By looking further in Haderslev we also see that Haderslev is the location publishing second most throughout 1862, but then decreases throughout the following years. 
 
@@ -336,13 +346,11 @@ data_1868_new <- all_data_1868 %>%
   mutate(unlist(sentiment))
 ```
 
-
 ```{r calculate average sentidascore 1868}
 mean_sentiment_1868 <- data_1868_new %>% 
   group_by(lplace) %>%
   summarise(mean_sentiment = mean(`unlist(sentiment)`))
 ```
-
 
 ```{r visualization 1868}
 ggplot(data = mean_sentiment_1868)+ 
@@ -382,6 +390,7 @@ ggplot()+
   xlab("Text")+
   ylab("Sentiment score (Sentida)")
 ```
+
 Here we can see, that the closets text from 1900 is the most negative text, which makes sense compared to the articles and the time period of publishing, where you could assume, that people still would have strong negative feelings, depending on the authors provenance. On the other hand, Danmarkshistorien.dk seems to be strongly positive, but this could be due to the article beeing mostly neutral written, wheras Bismarck and Europa, which also is on the positive side could be due to the publishing date beeing not only many years after 1864, but also after the reunion in 1920 and further development of the society. 
 
 # Mapping
@@ -401,11 +410,13 @@ library(leaflet)
 
 # Data sheet created in Excel
 We read the in excel created datasheet (described in section Data Acquisition) into R.
+
 ```{r read the dataset}
 data_sheet_SA2022 <- read.csv("data/data_sheet-SA2022.csv")
 ```
 
 We use leaflet to create a map of denmark and the data sheet for the needed locations
+
 ```{r map without descriptions}
 DANmap <- leaflet() %>% 
   addTiles() %>% 
@@ -417,6 +428,7 @@ DANmap
 ```
 
 We add some descriptions, containing the sentiment values, both mean and total, and the lplace and the amount of articles published. 
+
 ```{r map with descriptions}
 DANmap_notes <- leaflet() %>% 
   addTiles() %>% 
