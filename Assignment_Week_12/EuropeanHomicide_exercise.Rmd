@@ -21,6 +21,7 @@ library(ggplot2)
 ```
 
 # Assignment A 
+(Julie)
 Same for everyone: Visualize the duration of reign among Danish kings through time (showing the diachronic trend from ca 900 - today on the x axis) with ggplot. Use the dataset you/your group has created and submit both the script and the visualisation, ideally as part of an rmarkdown and html document (for details see bottom of this page). Experiment with geom_point(), geom_line() or geom_smooth() functions for the geometry.
 
 ```{r}
@@ -65,6 +66,7 @@ Western_Europe <- read_csv("data/homicide-rates-across-western-europe.csv")
 ```
 
 ## Inspect the data
+(Marchus)
 
 How clean and analysis-ready is the dataset? Do you understand what the column names represent? What is the difference between rate and homicide number?
 
@@ -105,7 +107,7 @@ ggplot(data = Western_Europe)+
 Alright, the homicide rates should all be descending over time. What a comfort. But the viz is not super clear. Let's check the rates for individual countries.
 
 ## Uncouple the homicides of individual countries for easier view
-
+(Ditte)
 You can visualize each country's trend separately by adding an extra argument to the ggplot, the `facet_wrap()` and feeding it the country column. If in doubt, check your ggplot tutorial and your country column name for exact usage.
 
 - reuse the ggplot from the chunk above
@@ -155,7 +157,7 @@ kings %>%
 
 
 ## Final tasks:
-
+(Nikolaj)
 1) Plot: In the facetted plot above, move the legend from the current position on the side to below the facets, and label it "Country" instead of "Entity".
 
 ```{r plot-homicides and change the theme, eval = TRUE}
